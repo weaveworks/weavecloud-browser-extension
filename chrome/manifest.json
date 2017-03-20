@@ -1,0 +1,28 @@
+{
+  "name": "Weavecloud Browser Extension",
+  "short_name": "Weavecloud",
+  "version": "0.1.5",
+  "description": "Places links to other monitoring systems into your Grafana panels",
+  "icons": { "128": "icon.png" },
+  "background": {
+      "persistent": false,
+      "page": "background.html"
+  },
+  "content_scripts": [{
+    "js": [
+      "vendors.js",
+      "content-bundle.js"
+    ],
+    "matches": [
+      "https://frontend.dev.weave.works/*"
+    ]
+  }],
+  "permissions": [
+    "cookies",
+    "storage",
+    "tabs",
+    "webNavigation",
+    "https://frontend.dev.weave.works/"
+  ],
+  "manifest_version": 2
+}

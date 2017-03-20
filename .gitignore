@@ -1,0 +1,10 @@
+node_modules/
+npm-debug.log
+.DS_Store
+
+chrome/*.js
+
+*.zip
+*.crx
+*.pem
+update.xml
