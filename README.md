@@ -1,4 +1,4 @@
-# Weavecloud Browser Extensions
+# Weave Cloud Browser Extensions
 
 Currently chrome-only.
 
