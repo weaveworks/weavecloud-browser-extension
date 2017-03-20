@@ -1,18 +1,15 @@
 /* eslint-disable no-plusplus */
 
-
-let currentUrl;
-
-function sendLinkData(payload) {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.tabs.sendMessage(tabs[0].id, payload, (res) => {
-      console.log('sendLinkData success', res.success);
-    });
+// Send queries to content script for injection
+function sendLinkData(payload, details) {
+  chrome.tabs.sendMessage(details.tabId, payload, (res) => {
+    console.log('sendLinkData success', res.success);
   });
 }
 
-function processPanels({ dashboard }) {
-  console.log(dashboard);
+// Extract queries from Grafana dashboard json
+function processPanels(dashboard, details) {
+  console.log('processPanels', dashboard);
   const rows = dashboard.rows;
   const links = [];
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
@@ -20,6 +17,7 @@ function processPanels({ dashboard }) {
     const panels = row.panels;
     for (let panelIndex = 0; panelIndex < panels.length; panelIndex++) {
       const panel = panels[panelIndex];
+      // panel.target has the queries
       if (panel.type === 'graph' && panel.targets) {
         const queries = panel.targets.map(t => t.expr);
         links.push({ rowIndex, panelIndex, queries });
@@ -27,64 +25,34 @@ function processPanels({ dashboard }) {
     }
   }
   if (links.length > 0) {
-    sendLinkData({ links });
+    sendLinkData({ links }, details);
   }
 }
 
+// Load currently displayed dashboard definition
 function loadDashboard(url) {
   const dashboardUrl = url.replace('dashboard/file', 'api/dashboards/file');
   return fetch(dashboardUrl, { credentials: 'include' })
     .then(res => res.json());
 }
 
-function isOnDashboard(url) {
-  return url.indexOf('dashboard/file') > -1;
-}
-
-function startRequest() {
-  if (currentUrl) {
-    loadDashboard(currentUrl)
-      .then(processPanels);
-  // } else {
-  //   scheduleRequest();
-  }
-}
-
-function onInit() {
-  console.log('onInit');
-  localStorage.requestFailureCount = 0;  // used for exponential backoff
-  chrome.tabs.getCurrent((tab) => {
-    currentUrl = tab.url;
-    startRequest();
-  });
-}
-
-chrome.runtime.onInstalled.addListener(onInit);
-
+// Grafana dashboard shibboleth
 const filters = {
   url: [{ urlContains: 'dashboard/file' }]
 };
 
 function onNavigate(details) {
-  if (details.url && isOnDashboard(details.url)) {
-    console.log(`Recognized navigation to: ${details.url}`);
-    currentUrl = details.url;
-    startRequest();
-  }
+  console.log(`Recognized navigation to: ${details.url}`);
+  loadDashboard(details.url)
+    .then(json => processPanels(json.dashboard, details));
 }
 
+// Listen for page load and navigation events
 if (chrome.webNavigation && chrome.webNavigation.onDOMContentLoaded &&
-    chrome.webNavigation.onReferenceFragmentUpdated) {
+    chrome.webNavigation.onHistoryStateUpdated) {
   chrome.webNavigation.onDOMContentLoaded.addListener(onNavigate, filters);
-  chrome.webNavigation.onReferenceFragmentUpdated.addListener(
-      onNavigate, filters);
+  chrome.webNavigation.onHistoryStateUpdated.addListener(onNavigate, filters);
+  console.log('Navigation listeners registered');
 } else {
-  chrome.tabs.onUpdated.addListener((_, details) => {
-    onNavigate(details);
-  });
+  console.error('Could not register navigation listener');
 }
-
-chrome.runtime.onStartup.addListener(() => {
-  console.log('Starting browser...');
-  startRequest();
-});
