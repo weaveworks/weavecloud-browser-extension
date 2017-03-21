@@ -1,27 +1,39 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-export function renderLink(container, queries) {
-  ReactDOM.render(<QueryLink queries={queries} />, container);
+const LOCAL = true;
+
+export function renderLink(container, props) {
+  ReactDOM.render(<QueryLink {...props} />, container);
 }
 
 export default class QueryLink extends React.Component {
   render() {
-    const { queries } = this.props;
-    if (queries.length === 0) {
+    const { baseUrl, link, instances } = this.props;
+    if (!link.queries || link.queries.length === 0) {
       return '';
     }
 
-    const baseUrl = 'http://localhost:4046/prom/proud-wind-05/notebook/new/';
-    const queryJson = encodeURIComponent(JSON.stringify({ queries }));
-    const url = `${baseUrl}${queryJson}`;
+    const isSingleInstance = instances.length === 1;
+    const urlPrefix = LOCAL ? 'http://localhost:4046' : baseUrl;
+    const queryJson = encodeURIComponent(JSON.stringify(link));
+    const caption = 'View on Weave Cloud';
+    const label = isSingleInstance ? '' : caption;
 
     return (
-      <a
-        style={{ position: 'absolute', opacity: 0.7, right: '2em', fontSize: '0.8em', paddingTop: 3 }}
-        href={url} target={baseUrl} title={`Explore on Weave Cloud: ${baseUrl}`}>
-        Explore on Weave Cloud <i className="fa fa-share-square-o" />
-      </a>
+      <span style={{ position: 'absolute', opacity: 0.7, right: '2em', fontSize: '0.8em', paddingTop: 3 }}>
+        {label}
+        {instances.map((instance, i) => <a
+          key={instance.id}
+          style={{ paddingLeft: 3 }}
+          href={`${urlPrefix}/prom/${instance.id}/notebook/new/${queryJson}`}
+          target={urlPrefix}
+          title={instance.name}>
+          {isSingleInstance && caption}
+          {!isSingleInstance && `[${i + 1}]`}
+        </a>
+        )}
+      </span>
     );
   }
 

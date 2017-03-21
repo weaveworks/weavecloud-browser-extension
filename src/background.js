@@ -7,8 +7,41 @@ function sendLinkData(payload, details) {
   });
 }
 
+function getQueryValue(url, key) {
+  // remove any preceding url and split
+  const query = url.substring(url.indexOf('?') + 1).split('&');
+  let pair;
+  for (let i = query.length - 1; i >= 0; i--) {
+    pair = query[i].split('=');
+    if (decodeURIComponent(pair[0]) === key) {
+      return decodeURIComponent(pair[1] || '');
+    }
+  }
+  return null;
+}
+
+function isTimestamp(str) {
+  return str.search(/^\d+$/) === 0;
+}
+
+// Return query time params (in seconds, like Prometheus wants it)
+function extractTime(dashboard, details) {
+  const url = details.url;
+  const from = getQueryValue(url, 'from') || dashboard.time.from;
+  const to = getQueryValue(url, 'to') || dashboard.time.to;
+
+  if (to === 'now' && from.startsWith('now') && from[3] === '-') {
+    return { queryEnd: (Date.now() / 1000), queryRange: from.split('-')[1] };
+  } else if (isTimestamp(to) && isTimestamp(from)) {
+    return { queryEnd: parseInt(to, 10) / 1000, queryStart: parseInt(from, 10) / 1000 };
+  }
+
+  // ignore complex case (now-x mixed with timestamp), reasonable default
+  return { queryEnd: (Date.now() / 1000), queryRange: '1h' };
+}
+
 // Extract queries from Grafana dashboard json
-function processPanels(dashboard, details) {
+function processPanels(details, dashboard, instances, baseUrl) {
   console.log('processPanels', dashboard);
   const rows = dashboard.rows;
   const links = [];
@@ -20,20 +53,30 @@ function processPanels(dashboard, details) {
       // panel.target has the queries
       if (panel.type === 'graph' && panel.targets) {
         const queries = panel.targets.map(t => t.expr);
-        links.push({ rowIndex, panelIndex, queries });
+        const link = { queries, ...extractTime(dashboard, details) };
+        links.push({ rowIndex, panelIndex, link });
       }
     }
   }
   if (links.length > 0) {
-    sendLinkData({ links }, details);
+    sendLinkData({ baseUrl, instances, links }, details);
   }
+}
+
+function getData(url) {
+  return fetch(url, { credentials: 'include' })
+    .then(res => res.json());
 }
 
 // Load currently displayed dashboard definition
 function loadDashboard(url) {
   const dashboardUrl = url.replace('dashboard/file', 'api/dashboards/file');
-  return fetch(dashboardUrl, { credentials: 'include' })
-    .then(res => res.json());
+  return getData(dashboardUrl);
+}
+
+function loadInstances(baseUrl) {
+  const instancesUrl = `${baseUrl}/api/users/lookup`;
+  return getData(instancesUrl);
 }
 
 // Grafana dashboard shibboleth
@@ -43,8 +86,15 @@ const filters = {
 
 function onNavigate(details) {
   console.log(`Recognized navigation to: ${details.url}`);
-  loadDashboard(details.url)
-    .then(json => processPanels(json.dashboard, details));
+  const baseUrl = details.url.indexOf('frontend.dev') > -1 ?
+    'https://frontend.dev.weave.works' :
+    'https://cloud.weave.works';
+  Promise.all([
+    loadDashboard(details.url)
+      .then(json => json.dashboard),
+    loadInstances(baseUrl)
+      .then(json => json.organizations),
+  ]).then(values => processPanels(details, values[0], values[1], baseUrl));
 }
 
 // Listen for page load and navigation events
