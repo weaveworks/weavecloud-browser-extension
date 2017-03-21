@@ -44,7 +44,7 @@ function extractTime(dashboard, details) {
 function processPanels(details, dashboard, instances, baseUrl) {
   console.log('processPanels', dashboard);
   const rows = dashboard.rows;
-  const links = [];
+  const graphs = [];
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
     const panels = row.panels;
@@ -53,13 +53,18 @@ function processPanels(details, dashboard, instances, baseUrl) {
       // panel.target has the queries
       if (panel.type === 'graph' && panel.targets) {
         const queries = panel.targets.map(t => t.expr);
-        const link = { queries, ...extractTime(dashboard, details) };
-        links.push({ rowIndex, panelIndex, link });
+        const graph = {
+          rowIndex,
+          panelIndex,
+          queries,
+          ...extractTime(dashboard, details)
+        };
+        graphs.push(graph);
       }
     }
   }
-  if (links.length > 0) {
-    sendLinkData({ baseUrl, instances, links }, details);
+  if (graphs.length > 0) {
+    sendLinkData({ baseUrl, instances, graphs }, details);
   }
 }
 
