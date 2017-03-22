@@ -31,13 +31,23 @@ function extractTime(dashboard, details) {
   const to = getQueryValue(url, 'to') || dashboard.time.to;
 
   if (to === 'now' && from.startsWith('now') && from[3] === '-') {
-    return { queryEnd: (Date.now() / 1000), queryRange: from.split('-')[1] };
+    return {
+      trailingNow: true,
+      queryRange: from.split('-')[1]
+    };
   } else if (isTimestamp(to) && isTimestamp(from)) {
-    return { queryEnd: parseInt(to, 10) / 1000, queryStart: parseInt(from, 10) / 1000 };
+    return {
+      trailingNow: false,
+      queryEnd: parseInt(to, 10) / 1000,
+      queryStart: parseInt(from, 10) / 1000
+    };
   }
 
   // ignore complex case (now-x mixed with timestamp), reasonable default
-  return { queryEnd: (Date.now() / 1000), queryRange: '1h' };
+  return {
+    trailingNow: true,
+    queryRange: '1h'
+  };
 }
 
 // Extract queries from Grafana dashboard json
@@ -57,14 +67,16 @@ function processPanels(details, dashboard, instances, baseUrl) {
           rowIndex,
           panelIndex,
           queries,
-          ...extractTime(dashboard, details)
+          title: panel.title,
         };
         graphs.push(graph);
       }
     }
   }
   if (graphs.length > 0) {
-    sendLinkData({ baseUrl, instances, graphs }, details);
+    const time = extractTime(dashboard, details);
+    const title = dashboard.title;
+    sendLinkData({ baseUrl, instances, graphs, time, title }, details);
   }
 }
 

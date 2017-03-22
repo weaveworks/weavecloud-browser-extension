@@ -2,7 +2,7 @@
 
 Currently chrome-only.
 
-* Inject links into Grafana dashboards
+* Inject links into Grafana dashboards to explore queries in Weave Cloud.
 
 ## Setup
 
