@@ -11,8 +11,15 @@ function injectLinks({ baseUrl, instances, graphs, time, title }) {
       if (panel) {
         const titlePanel = panel.querySelector('.panel-header');
         if (titlePanel) {
-          const container = document.createElement('span');
-          titlePanel.append(container);
+          const panelContainerClass = 'weave-panel-link';
+          let container = panel.querySelector(`.${panelContainerClass}`);
+          if (!container) {
+            container = document.createElement('span');
+            container.className = panelContainerClass;
+            titlePanel.append(container);
+          } else {
+            container.innerHTML = '';
+          }
           const params = { cells: [graph], title: graph.title, time };
           const style = styles.panel;
           renderLink(container, { baseUrl, instances, params, style });
@@ -24,8 +31,15 @@ function injectLinks({ baseUrl, instances, graphs, time, title }) {
   // find dashboard title to place link to show all graphs
   const titleIconsContainer = document.querySelector('.dashnav-action-icons');
   if (titleIconsContainer) {
-    const container = document.createElement('li');
-    titleIconsContainer.append(container);
+    const titleContainerClass = 'weave-dashboard-link';
+    let container = titleIconsContainer.querySelector(`.${titleContainerClass}`);
+    if (!container) {
+      container = document.createElement('li');
+      container.className = titleContainerClass;
+      titleIconsContainer.append(container);
+    } else {
+      container.innerHTML = '';
+    }
     const params = { cells: graphs, title, time };
     const style = styles.title;
     renderLink(container, { baseUrl, instances, params, style });
