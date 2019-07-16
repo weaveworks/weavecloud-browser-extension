@@ -26,7 +26,7 @@ function isTimestamp(str) {
 
 // Return query time params (in seconds, like Prometheus wants it)
 function extractTime(dashboard, details) {
-  const url = details.url;
+  const { url } = details;
   const from = getQueryValue(url, 'from') || dashboard.time.from;
   const to = getQueryValue(url, 'to') || dashboard.time.to;
 
@@ -35,7 +35,7 @@ function extractTime(dashboard, details) {
       trailingNow: true,
       queryRange: from.split('-')[1]
     };
-  } else if (isTimestamp(to) && isTimestamp(from)) {
+  } if (isTimestamp(to) && isTimestamp(from)) {
     return {
       trailingNow: false,
       queryEnd: parseInt(to, 10) / 1000,
@@ -53,11 +53,11 @@ function extractTime(dashboard, details) {
 // Extract queries from Grafana dashboard json
 function processPanels(details, dashboard, instances, baseUrl) {
   console.log('processPanels', dashboard);
-  const rows = dashboard.rows;
+  const { rows } = dashboard;
   const graphs = [];
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
-    const panels = row.panels;
+    const { panels } = row;
     for (let panelIndex = 0; panelIndex < panels.length; panelIndex++) {
       const panel = panels[panelIndex];
       // panel.target has the queries
@@ -75,8 +75,10 @@ function processPanels(details, dashboard, instances, baseUrl) {
   }
   if (graphs.length > 0) {
     const time = extractTime(dashboard, details);
-    const title = dashboard.title;
-    sendLinkData({ baseUrl, instances, graphs, time, title }, details);
+    const { title } = dashboard;
+    sendLinkData({
+      baseUrl, instances, graphs, time, title
+    }, details);
   }
 }
 
@@ -103,9 +105,9 @@ const filters = {
 
 function onNavigate(details) {
   console.log(`Recognized navigation to: ${details.url}`);
-  const baseUrl = details.url.indexOf('frontend.dev') > -1 ?
-    'https://frontend.dev.weave.works' :
-    'https://cloud.weave.works';
+  const baseUrl = details.url.indexOf('frontend.dev') > -1
+    ? 'https://frontend.dev.weave.works'
+    : 'https://cloud.weave.works';
   Promise.all([
     loadDashboard(details.url)
       .then(json => json.dashboard),
@@ -115,8 +117,8 @@ function onNavigate(details) {
 }
 
 // Listen for page load and navigation events
-if (chrome.webNavigation && chrome.webNavigation.onDOMContentLoaded &&
-    chrome.webNavigation.onHistoryStateUpdated) {
+if (chrome.webNavigation && chrome.webNavigation.onDOMContentLoaded
+    && chrome.webNavigation.onHistoryStateUpdated) {
   chrome.webNavigation.onDOMContentLoaded.addListener(onNavigate, filters);
   chrome.webNavigation.onHistoryStateUpdated.addListener(onNavigate, filters);
   console.log('Navigation listeners registered');

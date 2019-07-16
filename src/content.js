@@ -2,7 +2,9 @@ import { renderLink, styles } from './components/link';
 
 let injectionTimer;
 
-function injectLinks({ baseUrl, instances, graphs, time, title }) {
+function injectLinks({
+  baseUrl, instances, graphs, time, title
+}) {
   // find panel title element to place link for individual graph
   graphs.forEach(({ rowIndex, panelIndex, ...graph }) => {
     const row = document.querySelectorAll('.dash-row')[rowIndex];
@@ -22,7 +24,9 @@ function injectLinks({ baseUrl, instances, graphs, time, title }) {
           }
           const params = { cells: [graph], title: graph.title, time };
           const style = styles.panel;
-          renderLink(container, { baseUrl, instances, params, style });
+          renderLink(container, {
+            baseUrl, instances, params, style
+          });
         }
       }
     }
@@ -42,7 +46,9 @@ function injectLinks({ baseUrl, instances, graphs, time, title }) {
     }
     const params = { cells: graphs, title, time };
     const style = styles.title;
-    renderLink(container, { baseUrl, instances, params, style });
+    renderLink(container, {
+      baseUrl, instances, params, style
+    });
   }
 }
 
